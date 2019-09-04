@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
@@ -32,7 +33,7 @@ import static io.netty.channel.unix.NativeInetAddress.copyIpv4MappedIpv6Address;
 /**
  * Support <a href="http://linux.die.net/man/2/sendmmsg">sendmmsg(...)</a> on linux with GLIBC 2.14+
  */
-final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessageProcessor {
+final class NativeDatagramPacketArray {
 
     // Use UIO_MAX_IOV as this is the maximum number we can write with one sendmmsg(...) call.
     private final NativeDatagramPacket[] packets = new NativeDatagramPacket[UIO_MAX_IOV];
@@ -40,17 +41,15 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
     // We share one IovArray for all NativeDatagramPackets to reduce memory overhead. This will allow us to write
     // up to IOV_MAX iovec across all messages in one sendmmsg(...) call.
     private final IovArray iovArray = new IovArray();
+
+    private final MyMessageProcessor processor = new MyMessageProcessor();
+
     private int count;
 
     NativeDatagramPacketArray() {
         for (int i = 0; i < packets.length; i++) {
             packets[i] = new NativeDatagramPacket();
         }
-    }
-
-    private boolean addReadable(DatagramPacket packet) {
-        ByteBuf buf = packet.content();
-        return add0(buf, buf.readerIndex(), buf.readableBytes(), packet.recipient());
     }
 
     boolean addWritable(ByteBuf buf, int index, int len) {
@@ -78,9 +77,13 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
         return true;
     }
 
-    @Override
-    public boolean processMessage(Object msg) {
-        return msg instanceof DatagramPacket && addReadable((DatagramPacket) msg);
+    void add(ChannelOutboundBuffer buffer, final InetSocketAddress remote) throws Exception {
+        processor.remote = remote;
+        try {
+            buffer.forEachFlushedMessage(processor);
+        } finally {
+            processor.remote = null;
+        }
     }
 
     /**
@@ -104,6 +107,24 @@ final class NativeDatagramPacketArray implements ChannelOutboundBuffer.MessagePr
 
     void release() {
         iovArray.release();
+    }
+
+    private final class MyMessageProcessor implements MessageProcessor {
+        private InetSocketAddress remote;
+
+        @Override
+        public boolean processMessage(Object msg) {
+            if (msg instanceof DatagramPacket) {
+                DatagramPacket packet = (DatagramPacket) msg;
+                ByteBuf buf = packet.content();
+                return add0(buf, buf.readerIndex(), buf.readableBytes(), packet.recipient());
+            }
+            if (msg instanceof ByteBuf && remote != null) {
+                ByteBuf buf = (ByteBuf) msg;
+                return add0(buf, buf.readerIndex(), buf.readableBytes(), remote);
+            }
+            return false;
+        }
     }
 
     /**
