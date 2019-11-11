@@ -20,6 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.EventLoopException;
 import io.netty.channel.SingleThreadEventLoop;
+import io.netty.util.LogUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -52,6 +53,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
+    // 是否打开selectedKeys优化功能，默认不打开
     private static final boolean DISABLE_KEYSET_OPTIMIZATION =
             SystemPropertyUtil.getBoolean("io.netty.noKeySetOptimization", false);
 
@@ -92,7 +94,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     /**
      * The NIO {@link Selector}.
      */
-    Selector selector;
+    Selector selector; // 多路复用器
     private SelectedSelectionKeySet selectedKeys;
 
     private final SelectorProvider provider;
@@ -118,6 +120,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         selector = openSelector();
     }
 
+    /**
+     * 初始化 selector
+     * @return
+     */
     private Selector openSelector() {
         final Selector selector;
         try {
@@ -245,6 +251,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
 
         // Register all channels to the new Selector.
+        // 将旧的selector上注册过的channel重新注册到新的selector上
         int nChannels = 0;
         for (;;) {
             try {
@@ -302,6 +309,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         boolean oldWakenUp = wakenUp.getAndSet(false);
         try {
             if (hasTasks()) {
+                // 有消息尚未处理， 进行一次select
                 selectNow();
             } else {
                 select(oldWakenUp);
@@ -376,7 +384,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 // Ignore.
             }
         }
-
+        // 触发 processSelectedKeysOptimized 方法开始 step6. 循环触发 step4
         scheduleExecution();
     }
 
@@ -416,6 +424,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeysPlain(Set<SelectionKey> selectedKeys) {
+        LogUtil.log("进入 processSelectedKeysPlain 方法");
         // check if the set is empty and if so just return to not create garbage by
         // creating a new Iterator every time even if there is nothing to process.
         // See https://github.com/netty/netty/issues/597
@@ -456,6 +465,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     }
 
     private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
+        LogUtil.log("多路复用器检查到准备就绪的channel, 默认执行该方法");
         for (int i = 0;; i ++) {
             final SelectionKey k = selectedKeys[i];
             if (k == null) {
@@ -511,6 +521,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
             // to a spin loop
             if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                LogUtil.log("建立连接");
                 unsafe.read();
                 if (!ch.isOpen()) {
                     // Connection already closed - no need to handle write.
@@ -522,6 +533,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 ch.unsafe().forceFlush();
             }
             if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                LogUtil.log("客户端完成连接操作");
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                 // See https://github.com/netty/netty/issues/924
                 int ops = k.interestOps();
@@ -653,6 +665,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     selectCnt = 1;
                 } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                         selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
+                    // 如果发生连续n次空循环，默认512，说明触发了JDK NIO的epoll()死循环bug，通过重建selector的方式让系统恢复正常
                     // The selector returned prematurely many times in a row.
                     // Rebuild the selector to work around the problem.
                     logger.warn(

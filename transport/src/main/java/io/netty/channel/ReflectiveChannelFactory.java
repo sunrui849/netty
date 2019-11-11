@@ -16,6 +16,7 @@
 
 package io.netty.channel;
 
+import io.netty.util.LogUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -35,6 +36,7 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     @Override
     public T newChannel() {
         try {
+            LogUtil.log("实例化channel : " + clazz.getName());
             return clazz.newInstance();
         } catch (Throwable t) {
             throw new ChannelException("Unable to create Channel from class " + clazz, t);

@@ -32,7 +32,9 @@ import java.nio.channels.ScatteringByteChannel;
 public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
+    // 作为缓冲区
     private byte[] array;
+    // 用于转换ByteBuffer
     private ByteBuffer tmpNioBuf;
 
     /**
@@ -78,6 +80,8 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
 
     private void setArray(byte[] initialArray) {
         array = initialArray;
+        // 更新array需要设置tmpNioBuf为null,ByteBuffer也是byte[]实现，
+        // 如果修改了array，那么后面如果返回ByteBuffer则是老的arr[]，需要置空等待重新赋值
         tmpNioBuf = null;
     }
 
@@ -91,6 +95,10 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return ByteOrder.BIG_ENDIAN;
     }
 
+    /**
+     * 基于堆内存 返回 false
+     * @return
+     */
     @Override
     public boolean isDirect() {
         return false;
@@ -102,6 +110,11 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return array.length;
     }
 
+    /**
+     * 动态扩容
+     * @param newCapacity
+     * @return
+     */
     @Override
     public ByteBuf capacity(int newCapacity) {
         ensureAccessible();
@@ -131,6 +144,10 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return this;
     }
 
+    /**
+     * 如果是基于数组实现 返回true
+     * @return
+     */
     @Override
     public boolean hasArray() {
         return true;
@@ -229,6 +246,16 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         return this;
     }
 
+    /**
+     * 字节数组复制
+     * 不会修改读写索引
+     * @param index
+     * @param src
+     * @param srcIndex the first index of the source
+     * @param length   the number of bytes to transfer
+     *
+     * @return
+     */
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.length);

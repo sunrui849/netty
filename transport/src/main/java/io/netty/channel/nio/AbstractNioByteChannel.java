@@ -113,6 +113,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     byteBuf = allocHandle.allocate(allocator);
                     int writable = byteBuf.writableBytes();
                     int localReadAmount = doReadBytes(byteBuf);
+                    // localReadAmount 代表读取到的消息
                     if (localReadAmount <= 0) {
                         // not was read release the buffer
                         byteBuf.release();
@@ -132,7 +133,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         totalReadAmount = Integer.MAX_VALUE;
                         break;
                     }
-
+                    // 累加读取的字节数
                     totalReadAmount += localReadAmount;
 
                     // stop reading
@@ -145,6 +146,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                         // which might mean we drained the recv buffer completely.
                         break;
                     }
+                    // 默认  maxMessagesPerRead 为16，即如果连续16次还没读完，就会强制退出，等待下次selector轮询执行
                 } while (++ messages < maxMessagesPerRead);
 
                 pipeline.fireChannelReadComplete();
@@ -178,6 +180,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             Object msg = in.current();
             if (msg == null) {
                 // Wrote all messages.
+                // 待发送消息已经发送完成，清除半包标识
                 clearOpWrite();
                 break;
             }
@@ -199,6 +202,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 for (int i = writeSpinCount - 1; i >= 0; i --) {
                     int localFlushedAmount = doWriteBytes(buf);
                     if (localFlushedAmount == 0) {
+                        // 如果发送的字节数是，说明缓冲区已满
                         setOpWrite = true;
                         break;
                     }
@@ -215,6 +219,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 if (done) {
                     in.remove();
                 } else {
+                    // 没发送完成，设置写半包标识
                     incompleteWrite(setOpWrite);
                     break;
                 }

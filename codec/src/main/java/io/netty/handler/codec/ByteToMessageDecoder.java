@@ -217,16 +217,19 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 只处理ByteBuf类型msg， 否则直接透传
         if (msg instanceof ByteBuf) {
             RecyclableArrayList out = RecyclableArrayList.newInstance();
             try {
                 ByteBuf data = (ByteBuf) msg;
+                // 判断 cumulation 是否缓存了没有解码完成的半包消息
                 first = cumulation == null;
                 if (first) {
                     cumulation = data;
                 } else {
                     cumulation = cumulator.cumulate(ctx.alloc(), cumulation, data);
                 }
+                // 解码
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;
@@ -310,6 +313,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      */
     protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
+            // 有可读字节
             while (in.isReadable()) {
                 int outSize = out.size();
                 int oldInputLength = in.readableBytes();
@@ -319,6 +323,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                 // If it was removed, it is not safe to continue to operate on the buffer.
                 //
                 // See https://github.com/netty/netty/issues/1664
+                // ChannelHandlerContext 已被移除
                 if (ctx.isRemoved()) {
                     break;
                 }
@@ -336,7 +341,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                             StringUtil.simpleClassName(getClass()) +
                             ".decode() did not read anything but decoded a message.");
                 }
-
+                //如果是单条消息解码器，直接结束
                 if (isSingleDecode()) {
                     break;
                 }

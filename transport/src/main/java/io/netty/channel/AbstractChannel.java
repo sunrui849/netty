@@ -483,9 +483,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (eventLoop.inEventLoop()) {
+                // 判断当前所在线程是否是channel对应的nioEventLoop线程,如果是一个不存在并发问题，直接调用register0
                 register0(promise);
             } else {
                 try {
+                    // 触发 processSelectedKeysOptimized 方法开始， step1. 进入execute
                     eventLoop.execute(new OneTimeTask() {
                         @Override
                         public void run() {
@@ -505,6 +507,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void register0(ChannelPromise promise) {
             try {
+                System.out.println("register0" + Thread.currentThread().getName());
                 // check if the channel is still open as it could be closed in the mean time when the register
                 // call was outside of the eventLoop
                 if (!promise.setUncancellable() || !ensureOpen(promise)) {
@@ -605,6 +608,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (inFlush0) {
+                // 如果处于刷新状态
                 invokeLater(new OneTimeTask() {
                     @Override
                     public void run() {
@@ -658,10 +662,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } else {
                 Throwable error = null;
                 try {
+                    // 调用jdk的channel 的close
                     doClose();
                 } catch (Throwable t) {
                     error = t;
                 }
+                // 从多路复用器上取消注册
                 closeAndDeregister(buffer, wasActive, promise, error);
             }
         }
@@ -728,6 +734,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             try {
+                // 将channel从多路复用器上取消注册
                 doDeregister();
             } catch (Throwable t) {
                 safeSetFailure(promise, t);
@@ -792,6 +799,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            // 将消息添加到环形发送数组中
             outboundBuffer.addMessage(msg, size, promise);
         }
 

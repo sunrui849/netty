@@ -16,6 +16,7 @@
 
 package io.netty.channel;
 
+import io.netty.util.LogUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.net.SocketAddress;
@@ -29,6 +30,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeChannelRegisteredNow(ChannelHandlerContext ctx) {
         try {
+            LogUtil.log("channel 注册完成 初始化 initChannel");
             ctx.handler().channelRegistered(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);
@@ -147,6 +149,7 @@ public final class ChannelHandlerInvokerUtil {
 
     public static void invokeReadNow(final ChannelHandlerContext ctx) {
         try {
+            LogUtil.log("前往DefaultChannelPipeline 进行read，打开可读标记位");
             ctx.handler().read(ctx);
         } catch (Throwable t) {
             notifyHandlerException(ctx, t);

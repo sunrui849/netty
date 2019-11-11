@@ -18,6 +18,7 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
+import io.netty.util.LogUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -66,6 +67,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelHandl
         ChannelPipeline pipeline = ctx.pipeline();
         boolean success = false;
         try {
+            LogUtil.log("触发自定义 ChannelInitializer 的initChannel，添加handler");
             initChannel((C) ctx.channel());
             pipeline.remove(this);
             ctx.fireChannelRegistered();

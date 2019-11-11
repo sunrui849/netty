@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.util.LogUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.OneTimeTask;
@@ -181,6 +182,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public final void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            LogUtil.log("即将进行连接处理。。。");
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
                 return;
             }
@@ -200,6 +202,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     // Schedule connect timeout.
                     int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
+                        LogUtil.log("如果设置超时时间，则设置超时定时任务");
+                        // 如果已经到了超时时间，但是还没建立连接（建立连接后会将任务取消掉）
                         connectTimeoutFuture = eventLoop().schedule(new OneTimeTask() {
                             @Override
                             public void run() {
@@ -213,6 +217,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                     }
 
+                    // 设置连接结果监听器
                     promise.addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(ChannelFuture future) throws Exception {
@@ -244,6 +249,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
             // because what happened is what happened.
             if (!wasActive && isActive()) {
+                LogUtil.log("如果连接成功则触发 channelActive事件");
                 pipeline().fireChannelActive();
             }
 
@@ -280,6 +286,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             } finally {
                 // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
                 // See https://github.com/netty/netty/issues/1770
+                LogUtil.log("连接建立成功后取消掉超时任务");
                 if (connectTimeoutFuture != null) {
                     connectTimeoutFuture.cancel(false);
                 }
@@ -320,7 +327,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         boolean selected = false;
         for (;;) {
             try {
-                selectionKey = javaChannel().register(((NioEventLoop) eventLoop().unwrap()).selector, 0, this);
+                LogUtil.log("原生java NIO channel注册到多路复用器上");
+                // 通过selectionKey的interestOps方法可以方便的修改监听的操作位
+                selectionKey = javaChannel().register(((NioEventLoop) eventLoop().unwrap()).selector, 0, this);// 注册到多路复用器上，0代表什么事件也不注册
                 return;
             } catch (CancelledKeyException e) {
                 if (!selected) {
@@ -355,10 +364,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         readPending = true;
-
+        LogUtil.log("判断selectionKey的标记位，如果不是可读状态置为可读");
         final int interestOps = selectionKey.interestOps();
         if ((interestOps & readInterestOp) == 0) {
-            selectionKey.interestOps(interestOps | readInterestOp);
+            selectionKey.interestOps(interestOps | readInterestOp);// readInterestOp在构造函数中初始化，由子类传入进来
         }
     }
 

@@ -28,7 +28,7 @@ public abstract class AbstractFuture<V> implements Future<V> {
 
     @Override
     public V get() throws InterruptedException, ExecutionException {
-        await();
+        await(); // 阻塞
 
         Throwable cause = cause();
         if (cause == null) {

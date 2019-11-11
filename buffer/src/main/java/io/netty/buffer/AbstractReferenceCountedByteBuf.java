@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 /**
  * Abstract base class for {@link ByteBuf} implementations that count references.
  */
+// 自动内存回收
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> refCntUpdater;
@@ -55,6 +56,10 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         this.refCnt = refCnt;
     }
 
+    /**
+     * 引用加1
+     * @return
+     */
     @Override
     public ByteBuf retain() {
         for (;;) {
@@ -103,6 +108,10 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         return this;
     }
 
+    /**
+     * 引用减1
+     * @return true 已经无引用，  false 还存在引用
+     */
     @Override
     public final boolean release() {
         for (;;) {
@@ -113,6 +122,7 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
             if (refCntUpdater.compareAndSet(this, refCnt, refCnt - 1)) {
                 if (refCnt == 1) {
+                    // 如果释放没了则释放
                     deallocate();
                     return true;
                 }

@@ -62,6 +62,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
     final AbstractChannelHandlerContext head;
     final AbstractChannelHandlerContext tail;
 
+    // 维护一个名字和context的关系，减少在链表中查找的复杂度。
     private final Map<String, AbstractChannelHandlerContext> name2ctx =
             new HashMap<String, AbstractChannelHandlerContext>(4);
 
@@ -182,6 +183,7 @@ final class DefaultChannelPipeline implements ChannelPipeline {
             ChannelHandlerInvoker invoker, String baseName, String name, ChannelHandler handler) {
         synchronized (this) {
             AbstractChannelHandlerContext ctx = getContextOrDie(baseName);
+            // 重名检查
             name = filterName(name, handler);
             addBefore0(name, ctx, new DefaultChannelHandlerContext(this, invoker, name, handler));
         }

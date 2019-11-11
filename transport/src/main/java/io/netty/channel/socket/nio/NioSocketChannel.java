@@ -28,6 +28,7 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.LogUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.OneTimeTask;
 
@@ -199,6 +200,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        LogUtil.log("通过原生NIO绑定连接");
         if (localAddress != null) {
             javaChannel().socket().bind(localAddress);
         }
@@ -207,6 +209,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         try {
             boolean connected = javaChannel().connect(remoteAddress);
             if (!connected) {
+                LogUtil.log("如果连接不成功则设置selectionKey 为OP_CONNECT ，监听连接结果");
                 selectionKey().interestOps(SelectionKey.OP_CONNECT);
             }
             success = true;
@@ -220,6 +223,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected void doFinishConnect() throws Exception {
+        LogUtil.log("判断原生NIO是否完成连接");
         if (!javaChannel().finishConnect()) {
             throw new Error();
         }
@@ -237,6 +241,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     @Override
     protected int doReadBytes(ByteBuf byteBuf) throws Exception {
+        // byteBuf.writableBytes() 返回本次可读的最大长度
         return byteBuf.writeBytes(javaChannel(), byteBuf.writableBytes());
     }
 
@@ -257,6 +262,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         for (;;) {
             int size = in.size();
             if (size == 0) {
+                // 写完了后清除写标记位
                 // All written so clear OP_WRITE
                 clearOpWrite();
                 break;
@@ -284,6 +290,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     for (int i = config().getWriteSpinCount() - 1; i >= 0; i --) {
                         final int localWrittenBytes = ch.write(nioBuffer);
                         if (localWrittenBytes == 0) {
+                            // 如果为0，说明缓冲区已满
                             setOpWrite = true;
                             break;
                         }

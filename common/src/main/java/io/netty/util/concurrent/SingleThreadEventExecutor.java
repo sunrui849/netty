@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.LogUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -113,6 +114,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
 
             try {
+                // 触发 processSelectedKeysOptimized 方法开始 step5. 触发 SingleThreadEventExecutor 的run
                 SingleThreadEventExecutor.this.run();
             } catch (Throwable t) {
                 logger.warn("Unexpected exception from an event executor: ", t);
@@ -649,6 +651,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public void execute(Runnable task) {
+        // 触发 processSelectedKeysOptimized 方法开始 step2. 触发startExecution
         if (task == null) {
             throw new NullPointerException("task");
         }
@@ -729,13 +732,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 schedule(new ScheduledFutureTask<Void>(
                         this, Executors.<Void>callable(new PurgeTask(), null),
                         ScheduledFutureTask.deadlineNanos(SCHEDULE_PURGE_INTERVAL), -SCHEDULE_PURGE_INTERVAL));
+                // 触发 processSelectedKeysOptimized 方法开始 step3. 触发startExecution
                 scheduleExecution();
             }
         }
     }
 
     protected final void scheduleExecution() {
+        System.out.println(Thread.currentThread().getStackTrace());
         updateThread(null);
+        // 触发 processSelectedKeysOptimized 方法开始 step4. 触发asRunnable任务
         executor.execute(asRunnable);
     }
 

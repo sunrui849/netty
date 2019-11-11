@@ -365,6 +365,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             failIfNecessary(false);
         }
 
+        // 如果当前缓冲区可读字节小于偏移量，返回null
         if (in.readableBytes() < lengthFieldEndOffset) {
             return null;
         }
@@ -372,6 +373,7 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
         int actualLengthFieldOffset = in.readerIndex() + lengthFieldOffset;
         long frameLength = getUnadjustedFrameLength(in, actualLengthFieldOffset, lengthFieldLength, byteOrder);
 
+        // 报文非法
         if (frameLength < 0) {
             in.skipBytes(lengthFieldEndOffset);
             throw new CorruptedFrameException(

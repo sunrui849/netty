@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.LogUtil;
 import io.netty.util.concurrent.ExecutorServiceFactory;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -68,6 +69,7 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
 
     @Override
     public ChannelFuture register(Channel channel) {
+        LogUtil.log("获取parent Group 线程，处理连接线程池，注册channel,每次从线程池中获取一个线程进行注册  next().register(channel)");
         return next().register(channel);
     }
 

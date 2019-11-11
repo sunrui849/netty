@@ -115,6 +115,7 @@ public abstract class MessageToMessageEncoder<I> extends ChannelHandlerAdapter {
                     // See https://github.com/netty/netty/issues/2525
                     ChannelPromise voidPromise = ctx.voidPromise();
                     boolean isVoidPromise = promise == voidPromise;
+                    // 循环发送编码后的POJO对象
                     for (int i = 0; i < sizeMinusOne; i ++) {
                         ChannelPromise p;
                         if (isVoidPromise) {

@@ -154,6 +154,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf resetReaderIndex() {
+        // 判断读索引是否比写索引大
         readerIndex(markedReaderIndex);
         return this;
     }
@@ -172,6 +173,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf discardReadBytes() {
+        // 引用计数
         ensureAccessible();
         if (readerIndex == 0) {
             return this;
@@ -192,6 +194,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     @Override
     public ByteBuf discardSomeReadBytes() {
         ensureAccessible();
+        // 如果读索引为0，直接返回
         if (readerIndex == 0) {
             return this;
         }
@@ -645,7 +648,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf readBytes(byte[] dst, int dstIndex, int length) {
+        // 检查可读字节，是否越界
         checkReadableBytes(length);
+        // 子类实现
         getBytes(readerIndex, dst, dstIndex, length);
         readerIndex += length;
         return this;
@@ -710,6 +715,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf skipBytes(int length) {
+        // 检查跳过多少个长度是否会超出写索引
         checkReadableBytes(length);
         readerIndex += length;
         return this;
@@ -785,7 +791,9 @@ public abstract class AbstractByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(byte[] src, int srcIndex, int length) {
+        // 引用计数
         ensureAccessible();
+        // 检查可写长度是否满足
         ensureWritable(length);
         setBytes(writerIndex, src, srcIndex, length);
         writerIndex += length;

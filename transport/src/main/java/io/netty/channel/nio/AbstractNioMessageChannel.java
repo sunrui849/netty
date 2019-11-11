@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ServerChannel;
+import io.netty.util.LogUtil;
 
 import java.io.IOException;
 import java.net.PortUnreachableException;
@@ -89,11 +90,13 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 }
                 setReadPending(false);
                 int size = readBuf.size();
+                // 触发 channelRead事件通知
                 for (int i = 0; i < size; i ++) {
                     pipeline.fireChannelRead(readBuf.get(i));
                 }
 
                 readBuf.clear();
+                // 触发channelReadComplete事件通知
                 pipeline.fireChannelReadComplete();
 
                 if (exception != null) {

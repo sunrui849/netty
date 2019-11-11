@@ -22,6 +22,7 @@
 
 package io.netty.util.internal.chmv8;
 
+import io.netty.util.LogUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -1314,6 +1315,7 @@ public class ForkJoinPool extends AbstractExecutorService {
      * parallelism level exist. Adjusts counts etc on failure.
      */
     private void tryAddWorker() {
+        Thread.currentThread().getStackTrace();
         long c; int u, e;
         while ((u = (int)((c = ctl) >>> 32)) < 0 &&
                 (u & SHORT_SIGN) != 0 && (e = (int)c) >= 0) {

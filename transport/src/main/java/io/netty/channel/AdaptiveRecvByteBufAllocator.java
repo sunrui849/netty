@@ -44,10 +44,12 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
 
     static {
         List<Integer> sizeTable = new ArrayList<Integer>();
+        // 步进16
         for (int i = 16; i < 512; i += 16) {
             sizeTable.add(i);
         }
 
+        // 翻倍
         for (int i = 512; i > 0; i <<= 1) {
             sizeTable.add(i);
         }
@@ -61,6 +63,7 @@ public class AdaptiveRecvByteBufAllocator implements RecvByteBufAllocator {
     public static final AdaptiveRecvByteBufAllocator DEFAULT = new AdaptiveRecvByteBufAllocator();
 
     private static int getSizeTableIndex(final int size) {
+        // 采用二分法查找索引
         for (int low = 0, high = SIZE_TABLE.length - 1;;) {
             if (high < low) {
                 return low;

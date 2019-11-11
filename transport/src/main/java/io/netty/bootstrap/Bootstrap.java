@@ -26,6 +26,7 @@ import io.netty.resolver.DefaultNameResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.NameResolverGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.LogUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.logging.InternalLogger;
@@ -201,6 +202,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     private static ChannelFuture doConnect(
             final SocketAddress remoteAddress, final SocketAddress localAddress,
             final ChannelFuture regFuture, final ChannelPromise connectPromise) {
+        LogUtil.log("触发连接动作");
         if (regFuture.isDone()) {
             doConnect0(remoteAddress, localAddress, regFuture, connectPromise);
         } else {
@@ -222,6 +224,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         final Channel channel = connectPromise.channel();
+        LogUtil.log("异步执行 connect 操作");
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
